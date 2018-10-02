@@ -46,10 +46,6 @@
     } else if ( ! file_exists("settings.php") ) {
         echo "<hr><h2>Maybe the setup is not completed, missing settings.php</h2><hr>"; 
         exit;
-
-    } else if ( file_exists("setup.php") ) {
-        echo "<hr><h2>Maybe the setup is not completed, else please delete setup.php</h2><hr>"; 
-        exit;
     }
 
 	require_once 'weave_storage.php';
@@ -58,6 +54,7 @@
 	require_once 'weave_hash.php';
 
     require_once "WBOJsonOutput.php";
+
 	//header("Content-type: application/json");
 
 	$server_time = round(microtime(1), 2);

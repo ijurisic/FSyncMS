@@ -42,6 +42,7 @@
 // --------------------------------------------
 // variables start
 // --------------------------------------------
+
 $action = null;
 $dbType = null;
 
@@ -49,6 +50,8 @@ $dbUser = null;
 $dbName = null;
 $dbPass = null;
 $dbHost = null;
+
+$sqlitefile = null;
 
 
 // --------------------------------------------
@@ -83,6 +86,15 @@ if ( isset( $_POST['dbpass'] ) ) {
     $dbPass = check_input($_POST['dbpass']);
 }
 
+if ( isset( $_POST['sqlite_file'] ) ) {
+    $sqlitefile = check_input($_POST['sqlite_file']);
+
+    if (strcmp(pathinfo($sqlitefile, PATHINFO_EXTENSION), "sqlite") !== 0) {
+       echo "Please use extension \"sqlite\" for SQLite 3.x database <a href=\"#\" onclick=\"history.go(-1)\">Go Back</a>";
+       exit;
+    }
+}
+
 // --------------------------------------------
 // post handling end
 // --------------------------------------------
@@ -107,20 +119,11 @@ function check_input( $data ) {
     create the config file with the database type
     and the given connection credentials
 */
-function write_config_file($dbt, $dbh, $dbn, $dbu, $dbp, $fsRoot) {
+function write_config_file($dbt, $dbh, $dbn, $dbu, $dbp, $fsRoot, $sqlitefile) {
 
     // construct the name of config file
     //
-    $path = explode('/', $_SERVER['SCRIPT_FILENAME']);
-    array_pop($path);
-    array_push($path, 'settings.php');
-    $cfg_file_name = implode('/', $path);
-
-    if ( file_exists($cfg_file_name) && filesize( $cfg_file_name ) > 0 ) {
-        echo "<hr>The config file $cfg_file_name is already present</hr>";
-        return;
-    }
-
+    $cfg_file_name = getcwd() . "/settings.php";
     echo "Creating cfg file: " . $cfg_file_name;
 
     // now build the content of the config file
@@ -138,7 +141,7 @@ function write_config_file($dbt, $dbh, $dbn, $dbu, $dbp, $fsRoot) {
 
     $cfg_content .= "    // Database connection credentials\n";
     $cfg_content .= "    // \n";
-    $cfg_content .= "    define(\"SQLITE_FILE\", \"weave_db\");\n";
+    $cfg_content .= "    define(\"SQLITE_FILE\", \"$sqlitefile\");\n";
     if ( $dbt != "mysql" ) {
         $cfg_content .= "    define(\"MYSQL_ENABLE\", false);\n";
         $cfg_content .= "    define(\"MYSQL_HOST\", \"localhost\");\n";
@@ -170,7 +173,7 @@ function write_config_file($dbt, $dbh, $dbn, $dbu, $dbp, $fsRoot) {
 
     // now write everything
     //
-    $cfg_file = fopen($cfg_file_name, "a");
+    $cfg_file = fopen($cfg_file_name, "w");
     fputs($cfg_file, "$cfg_content");
     fclose($cfg_file);
 }
@@ -234,7 +237,7 @@ function print_mysql_connection_form() {
 // check if we have no configuration at the moment
 //
 if ( file_exists("settings.php") && filesize( "settings.php" ) > 0 ) {
-    echo "<hr><h2>The setup looks like it's completed, please delete settings.php</h2><hr>";
+    echo "<hr><h2>The setup looks like it's completed, please delete settings.php if wont re-setup start.</h2><hr>";
     exit;
 }
 
@@ -263,7 +266,9 @@ if ( ! $action ) {
     }
 
     if ( extension_loaded('pdo_sqlite') ) {
+        if ( ! $sqlitefile ) $sqlitefile = getcwd() . "/weave_db.sqlite";
         print '<input type="radio" name="dbType" value="sqlite" checked="checked" /> SQLite ';
+	print 'Sqlite database file: <input type="text" name="sqlite_file" size="40" autofocus value="' . $sqlitefile . '"><br><br>';
         $validPdoDriver++;
     } else {
         print 'SQLite not possible (Driver missing) <br>';
@@ -315,17 +320,11 @@ if ( $action == "step2" ) {
 
         if ( $dbType == "sqlite" ) {
 
-            $path = explode('/', $_SERVER['SCRIPT_FILENAME']);
-            $db_name = 'weave_db';
-            array_pop($path);
-            array_push($path, $db_name);
-            $db_name = implode('/', $path);
-
-            if ( file_exists($db_name) && filesize( $db_name ) > 0 ) {
+            if ( file_exists($sqlitefile) && filesize( $sqlitefile ) > 0 ) {
                 $dbInstalled = true;
             } else {
-                echo("Creating sqlite weave storage: ". $db_name ."<br>");
-                $dbHandle = new PDO('sqlite:' . $db_name);
+                echo("Creating sqlite weave storage: ". $sqlitefile ."<br>");
+                $dbHandle = new PDO('sqlite:' . $sqlitefile);
                 $dbHandle->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             }
 
@@ -395,7 +394,7 @@ if ( $action == "step2" ) {
 
     // write settings.php, if not possible, display the needed contant
     //
-    write_config_file($dbType, $dbHost, $dbName, $dbUser, $dbPass, $fsRoot);
+    write_config_file($dbType, $dbHost, $dbName, $dbUser, $dbPass, $fsRoot, $sqlitefile);
 
     echo "<hr><hr> Finished the setup, please delete setup.php and go on with the FFSync<hr><hr>";
     echo <<<EOT

@@ -60,11 +60,7 @@ class WeaveStorage
         {
             if ( ! MYSQL_ENABLE ) 
             {
-                $path = explode('/', $_SERVER['SCRIPT_FILENAME']);
                 $db_name = SQLITE_FILE;
-                array_pop($path);
-                array_push($path, $db_name);
-                $db_name = implode('/', $path);
 
                 if ( ! file_exists($db_name) ) 
                 {
